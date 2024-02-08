@@ -5,7 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const schedule = require('node-schedule')
 const youtubeVideosRefresh = require('./requests/youtubeRequest');
-
+var cors = require('cors')
 //youtubeData
   const apiKey = "AIzaSyDmbBznvlOCe8cI1pCfuZ__llk3hT1UB98"
   const baseApiUrl = "https://www.googleapis.com/youtube/v3"
@@ -24,7 +24,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
+app.use(cors({
+  origin: "https://sofovial.onrender.com/"
+}))
 app.use('/videos', useVideos)
 app.use('/playlists', usePlaylists)
 app.use('/search', useSearch)
