@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors({
-  origin: ["52.41.36.82","54.191.253.12","44.226.122.3"]
+  origin:"*"
 }))
 app.use('/videos', useVideos)
 app.use('/playlists', usePlaylists)
