@@ -31,7 +31,7 @@ app.use('/videos', useVideos)
 app.use('/playlists', usePlaylists)
 app.use('/search', useSearch)
 
-schedule.scheduleJob('50 * * * *', function(){
+schedule.scheduleJob('45 * * * *', function(){
   youtubeVideosRefresh()
 })
 
