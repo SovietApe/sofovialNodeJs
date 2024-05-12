@@ -1,108 +1,113 @@
 const axios =  require('axios')
 const  videosModel =  require('../models/videosModel')
-const  playslistsModel = require('../models/playlistModel')
+const  playlistsModel = require('../models/playlistModel')
 
 async function youtubeVideosRefresh(){
-    async function getVideos(){
-        var nextPageToken = true
-        var token = ""
-        while (nextPageToken) {
-          const response = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=AIzaSyDmbBznvlOCe8cI1pCfuZ__llk3hT1UB98&channelId=UC82zHIKX3OC02DiGBT68q3g&part=snippet,id&order=date&maxResults=50${token}`)
-          let video = response.data.items
+  // get videos
+  async function getVideosAndUpload(){
+    var token = ""
+    var cuantosestaban = 0
+    var videosubidos = 0
+    var nextPageToken = true
+    while(nextPageToken) {
+          const response = await axios.get(`https://www.googleapis.com/youtube/v3/search?key=AIzaSyC7DgRXTLLqmvXQvOJ7wpGSPdwF5SHiIKE&channelId=UC82zHIKX3OC02DiGBT68q3g&part=snippet,id&order=date&maxResults=50${token}`)
+          const videoItem = response.data.items
           console.log(response.data.nextPageToken)
-          video.map( async (item)=>{
-            const validation = await videosModel.findOne({id: item.id.videoId})
-            if(validation !== null){
-              console.log("ya taba wachita")
-            }else{
-              try{
-                const video = new videosModel({
-                  id: item.id.videoId,
-                  etag: item.etag,
-                  snippet: item.snippet
-                })
-                const document = await video.save()
-                res.json(document)
-              }catch(error){
-                console.log(error.message)
+          async function upload(){
+            for(var x = 0; x < videoItem.length; x++){
+                const validation = await videosModel.findOne({id: videoItem[x].id.videoId})
+                if(validation !== null){
+                  cuantosestaban = (cuantosestaban + 1)
+                }else{
+                  try{
+                    const video = new videosModel({
+                      id: videoItem[x].id.videoId,
+                      etag: videoItem[x].etag,
+                      snippet: videoItem[x].snippet
+                    })
+                    const document = await video.save()
+                    document
+                    videosubidos = (videosubidos + 1)
+                  }catch(error){
+                    console.log(error.message)
+                  }
+                }
               }
-            }
-          })
+          }
+          await upload()
           if(typeof response.data.nextPageToken !== 'undefined'){
             token = `&pageToken=${response.data.nextPageToken}`
           }else if(typeof response.data.nextPageToken === 'undefined'){
             nextPageToken = false
           }
         }
-      }
-      await getVideos()
-
-    async function getVideosByPlaylists(){
-        const getplaylists = await axios.get(`https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails%2Cid%2Clocalizations%2Cplayer%2Csnippet%2Cstatus&channelId=UC82zHIKX3OC02DiGBT68q3g&maxResults=50&key=AIzaSyDmbBznvlOCe8cI1pCfuZ__llk3hT1UB98`)
-        const playlists = getplaylists.data.items
-        playlists.map((playlist)=>{
-            getPlaylistItems(playlist)
-        })
+        console.log("coincidencias: "+cuantosestaban+"   /    subidos: "+videosubidos)
+  } 
+  await getVideosAndUpload()
+  // get playlists and items
+  async function getVideosByPlaylists(){
+    const getplaylists = await axios.get(`https://youtube.googleapis.com/youtube/v3/playlists?part=snippet%2CcontentDetails%2Cid%2Clocalizations%2Cplayer%2Csnippet%2Cstatus&channelId=UC82zHIKX3OC02DiGBT68q3g&maxResults=50&key=AIzaSyC7DgRXTLLqmvXQvOJ7wpGSPdwF5SHiIKE`)
+    const playlists = getplaylists.data.items
+    for(var i = 0; i < playlists.length; i++){
+        await getPlaylistItems(playlists[i])
     }
-
-    const getPlaylistItems = async (playlist)=>{
-        const validatePlaylist = await playslistsModel.findOne({id:playlist.id})
-        if(validatePlaylist === null){
-        const newplaylist = new playslistsModel({
-            id: playlist.id,
-            snippet: playlist.snippet
-        })
-        const document = await newplaylist.save()
-        document
+  }
+  const getPlaylistItems = async (playlist)=>{
+      const validatePlaylist = await playlistsModel.findOne({id:playlist.id})
+      if(validatePlaylist === null){
+      const newplaylist = new playlistsModel({
+          id: playlist.id,
+          snippet: playlist.snippet
+      })
+      const document = await newplaylist.save()
+      document
+      }
+      var token = ""
+      let i = 0
+      for(var nextPageToken = true; nextPageToken === true;){
+          i++
+          const response = await axios.get(`https://www.googleapis.com/youtube/v3/playlistItems?key=AIzaSyC7DgRXTLLqmvXQvOJ7wpGSPdwF5SHiIKE&playlistId=${playlist.id}&part=snippet,id&maxResults=50${token}`)
+          console.log("llamada api")
+          const playlistvideos = response.data.items
+          for(let x = 0; x < playlistvideos.length; x++){
+              const validation = await videosModel.findOne({id: playlistvideos[x].snippet.resourceId.videoId})
+              if(validation !== null){
+                  try {
+                      const findplaylist = validation.playlists.find((item) => item.id === playlist.id)
+                      if(typeof findplaylist === "undefined"){
+                          const modofiedplaylists = validation.playlists.push({id: playlist.id})
+                          modofiedplaylists
+                          const document = await videosModel.updateOne({id: playlistvideos[x].snippet.resourceId.videoId}, {playlists: validation.playlists})
+                          document
+                      }
+                  } catch (error) {
+                      console.log(error)
+                  }
+              }else{
+                  try{
+                      let newplaylist = [{id: playlist.id}]
+                      const newvideo = new videosModel({
+                          id:playlistvideos[x].snippet.resourceId.videoId,
+                          etag: playlistvideos[x].etag,
+                          snippet: playlistvideos[x].snippet,
+                          playlists: newplaylist
+                      })
+                      const document = await newvideo.save()
+                      document
+                  }catch(error){
+                      console.log(error.message)
+                      }
+                  }
+              if(typeof response.data.nextPageToken !== 'undefined'){
+                  token = `&pageToken=${response.data.nextPageToken}`
+              }else if(typeof response.data.nextPageToken === 'undefined'){
+                  nextPageToken = false
+              }
+          }
         }
-        var nextPageToken = true
-        var token = ""
-        let i = 0
-        while(nextPageToken){
-            i++
-            const response = await axios.get(`https://www.googleapis.com/youtube/v3/playlistItems?key=AIzaSyDmbBznvlOCe8cI1pCfuZ__llk3hT1UB98&playlistId=${playlist.id}&part=snippet,id&maxResults=50${token}`)
-            const playlistvideos = response.data.items
-            playlistvideos.map(async (video)=>{
-                const validation = await videosModel.findOne({id: video.snippet.resourceId.videoId})
-                if(validation !== null){
-                    try {
-                        const findplaylist = validation.playlists.find((item) => item.id === playlist.id)
-                        if(typeof findplaylist === "undefined"){
-                            const modofiedplaylists = validation.playlists.push({id: playlist.id})
-                            console.log(modofiedplaylists)
-                            const document = await videosModel.updateOne({id: video.snippet.resourceId.videoId}, {playlists: validation.playlists})
-                            console.log(document)
-                            document
-                        }
-                    } catch (error) {
-                        console.log(error)
-                    }
-                }else{
-                    try{
-                        let newplaylist = [{id: playlist.id}]
-                        const newvideo = new videosModel({
-                            id:video.snippet.resourceId.videoId,
-                            etag: video.etag,
-                            snippet: video.snippet,
-                            playlists: newplaylist
-                        })
-                        const document = await newvideo.save()
-                        console.log(document)
-                    }catch(error){
-                        console.log(error.message)
-                        }
-                    }
-                if(typeof response.data.nextPageToken !== 'undefined'){
-                    token = `&pageToken=${response.data.nextPageToken}`
-                }else if(typeof response.data.nextPageToken === 'undefined'){
-                    nextPageToken = false
-                }
-            })
-        }
-        console.log(playlist.snippet.localized.title + " se itero: "+ i)
-    }   
-
-    await getVideosByPlaylists()
+      console.log(playlist.snippet.localized.title + " se itero: "+ i)
+  }
+  await getVideosByPlaylists()
 
 }
 

@@ -7,6 +7,6 @@ const playlistSchema = new mongoose.Schema({
     localized: Object,
 });
 
-const playslistsModel = mongoose.model("playlist", playlistSchema);
+const playlistsModel = mongoose.model("playlist", playlistSchema);
 
-module.exports = playslistsModel
+module.exports = playlistsModel
