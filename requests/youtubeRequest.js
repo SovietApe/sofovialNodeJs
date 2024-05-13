@@ -112,7 +112,7 @@ async function youtubeVideosRefresh(){
   async function deleteDeletedVideos(){
     console.log("aaa")
     try{
-      const deleteDocuments = await videosModel.deleteMany({"snippet.title":"Deleted Video"})
+      const deleteDocuments = await videosModel.deleteMany({"snippet.title":"Deleted video"})
       console.log(deleteDocuments)
       deleteDocuments
     }catch(error){
