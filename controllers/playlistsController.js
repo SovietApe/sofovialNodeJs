@@ -36,7 +36,9 @@ module.exports={
                     const videos = documents.slice((index1 - 50),(index1))
                     console.log(videos)
                     res.json({videos: videos,
-                    pages: pages})
+                    pages: pages,
+                    totalResults:totalResults
+                })
             }else{
                 res.json("la pagina no existe")
             }
