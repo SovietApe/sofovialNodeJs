@@ -108,7 +108,18 @@ async function youtubeVideosRefresh(){
       console.log(playlist.snippet.localized.title + " se itero: "+ i)
   }
   await getVideosByPlaylists()
-
+  //delete deleted videos
+  async function deleteDeletedVideos(){
+    console.log("aaa")
+    try{
+      const deleteDocuments = await videosModel.deleteMany({"snippet.title":"Deleted Video"})
+      console.log(deleteDocuments)
+      deleteDocuments
+    }catch(error){
+      console.log(error)
+    }
+  }
+  await deleteDeletedVideos()
 }
 
 module.exports = youtubeVideosRefresh
